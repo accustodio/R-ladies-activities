@@ -1,0 +1,64 @@
+---
+title: "relatorio"
+output: html_document
+editor_options: 
+chunk_output_type: inline
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+da <- readr::read_csv("cursosprouni.csv")
+```
+
+## Análise unidimensional
+
+```{r}
+da %>% 
+  mutate_if(is.character, as.factor) %>% 
+  skimr::skim()
+```
+
+Pela análise univariada identificamos que;
+
+1. Não sabemos com certeza o que significa o missing nas colunas que começam com `bolsa_`.
+
+Cursos por estado
+
+```{r}
+da %>% 
+  count(uf_busca, sort = TRUE) %>% 
+  mutate(prop = scales::percent(n/sum(n))) %>% 
+  knitr::kable()
+```
+
+Vagas por estado
+
+```{r}
+distrbolsa <- da %>% 
+  gather(tipo_bolsa, bolsa, starts_with("bolsa_")) %>%
+  # replace_na(list(bolsa = 0)) %>% 
+  # head() %>% as.data.frame()
+  group_by(uf_busca, tipo_bolsa) %>% 
+  summarise(n_bolsas = sum(bolsa, na.rm = TRUE)) %>% 
+  # arrange(desc(n_bolsas)) %>% 
+  mutate(prop = n_bolsas/sum(n_bolsas))
+```
+
+grafico
+
+```{r}
+distrbolsa %>% 
+  summarise(n_bolsas = sum(n_bolsas)) %>% 
+  ## opcao 1: pacote forcats
+  # mutate(uf_busca = fct_reorder(uf_busca, n_bolsas, .desc = TRUE)) %>%
+  ## opcao 2: base
+  mutate(uf_busca = reorder(uf_busca, n_bolsas, 
+                            FUN = function(x) -mean(x))) %>%
+  ggplot(aes(x = uf_busca, y = n_bolsas)) +
+  geom_col()
+
+```
